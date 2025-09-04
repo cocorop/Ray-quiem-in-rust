@@ -8,7 +8,7 @@ struct Vec3 {
 
 impl Vec3 {
 
-    //Constructeur
+    //Constructor
 
     fn new(x:f64, y:f64, z:f64) -> Self {
         Vec3 { e: [x, y, z] }
@@ -19,7 +19,7 @@ impl Vec3 {
     fn y(&self) -> f64 {self.e[1]}
     fn z(&self) -> f64 {self.e[2]}
 
-    //fonctions autres
+    //auxilliary functions
     fn cross(&self, other: &Self) -> Self {
         Vec3::new(
             self.y() * other.z() - self.z() * other.y(),
@@ -36,13 +36,13 @@ impl Vec3 {
     }
 
 
-    //ecrire couleur
+    //color writing
     pub fn write_color<W: Write>(out: &mut W, pixel_color: &Vec3) -> io::Result<()> {
     let r = pixel_color.x();
     let g = pixel_color.y();
     let b = pixel_color.z();
 
-    // Convert [0.0, 1.0] floats to [0, 255] bytes
+    //convert float to integer
     let r_byte = (r) as i32;
     let g_byte = (g) as i32;
     let b_byte = (b) as i32;
@@ -52,7 +52,7 @@ impl Vec3 {
 }
 }
 
-//opérateurs
+//operators
 impl Add for Vec3 {
     type Output = Vec3;
     fn add(self, other: Self) -> Self {
@@ -226,4 +226,5 @@ mod tests {
         assert_eq!(neg.y(), 2.0);
         assert_eq!(neg.z(), -3.0);
     }
+
 }
