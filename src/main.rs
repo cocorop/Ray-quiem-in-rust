@@ -4,6 +4,8 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
 
+mod vec3;
+
 fn main() -> Result<(), Error> {
     env_logger::init();
 
