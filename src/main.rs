@@ -4,7 +4,12 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
 
+mod ray;
 mod vec3;
+
+const ASPECT_RATIO: f64 = 16.0 / 9.0;
+const WIDTH: u32 = 400;
+const HEIGHT: u32 = (WIDTH as f64 / ASPECT_RATIO) as u32;
 
 fn main() -> Result<(), Error> {
     env_logger::init();
@@ -13,6 +18,8 @@ fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new().unwrap();
     let window = WindowBuilder::new()
         .with_title("Rayquiem")
+        .with_resizable(false)
+        .with_inner_size(PhysicalSize { width: WIDTH, height: HEIGHT })
         .build(&event_loop)
         .unwrap();
 
