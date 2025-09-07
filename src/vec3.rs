@@ -1,6 +1,9 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    fmt::Display,
+    ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
@@ -13,6 +16,7 @@ impl Vec3 {
     }
 
     pub const ZERO: Self = Vec3::new(0.0, 0.0, 0.0);
+    pub const ONE: Self = Vec3::new(1.0, 1.0, 1.0);
 
     pub fn length(&self) -> f64 {
         self.length_squared().sqrt()
@@ -142,5 +146,12 @@ impl Index<usize> for Vec3 {
             2 => &self.z,
             _ => panic!("Vec3 index out of bounds."),
         }
+    }
+}
+
+// Pretty-print
+impl Display for Vec3 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {}, {})", self.x, self.y, self.z)
     }
 }
