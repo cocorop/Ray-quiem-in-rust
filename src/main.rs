@@ -1,15 +1,25 @@
+use std::time::Instant;
+
 use pixels::{Error, Pixels, SurfaceTexture};
 use winit::dpi::PhysicalSize;
-use winit::event::{Event, WindowEvent};
+use winit::event::{ElementState, Event, KeyEvent, WindowEvent};
 use winit::event_loop::EventLoop;
+use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::WindowBuilder;
+
+use crate::ray::Ray;
+use crate::vec3::Vec3;
 
 mod ray;
 mod vec3;
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const WIDTH: u32 = 400;
+const WIDTH: u32 = 576;
 const HEIGHT: u32 = (WIDTH as f64 / ASPECT_RATIO) as u32;
+const FOCAL_LENGTH: f64 = 1.0;
+
+const VIEWPORT_HEIGHT: f64 = 2.0;
+const VIEWPORT_WIDTH: f64 = VIEWPORT_HEIGHT * (WIDTH as f64 / HEIGHT as f64);
 
 fn main() -> Result<(), Error> {
     env_logger::init();
@@ -19,7 +29,10 @@ fn main() -> Result<(), Error> {
     let window = WindowBuilder::new()
         .with_title("Rayquiem")
         .with_resizable(false)
-        .with_inner_size(PhysicalSize { width: WIDTH, height: HEIGHT })
+        .with_inner_size(PhysicalSize {
+            width: WIDTH,
+            height: HEIGHT,
+        })
         .build(&event_loop)
         .unwrap();
 
@@ -30,19 +43,49 @@ fn main() -> Result<(), Error> {
         Pixels::new(window_size.width, window_size.height, surface_texture)?
     };
 
+    // Camera
+    let mut camera_center = Vec3::ZERO;
+
+    const VIEWPORT_U: Vec3 = Vec3::new(VIEWPORT_WIDTH, 0.0, 0.0);
+    const VIEWPORT_V: Vec3 = Vec3::new(0.0, -VIEWPORT_HEIGHT, 0.0);
+
+    let pixel_delta_u = VIEWPORT_U / (WIDTH as f64);
+    let pixel_delta_v = VIEWPORT_V / (HEIGHT as f64);
+
+    let viewport_upper_left =
+        camera_center - Vec3::new(0.0, 0.0, FOCAL_LENGTH) - VIEWPORT_U / 2.0 - VIEWPORT_V / 2.0;
+    let pixel0_pos = viewport_upper_left + (pixel_delta_u + pixel_delta_v) / 2.0;
+
     // Event loop
     let res = event_loop.run(|event, elwt| match event {
         Event::WindowEvent { window_id, event } if window_id == window.id() => match event {
             WindowEvent::CloseRequested => elwt.exit(),
 
-            // Redraw frame
+            // Redraw the frame
             WindowEvent::RedrawRequested => {
-                draw(pixels.frame_mut(), window_size);
+                let start = Instant::now();
+
+                draw(
+                    pixels.frame_mut(),
+                    window_size,
+                    pixel0_pos,
+                    pixel_delta_u,
+                    pixel_delta_v,
+                    camera_center,
+                );
+
+                let duration = start.elapsed();
+
                 if let Err(err) = pixels.render() {
                     println!("Failed to render frame: {err}");
                     elwt.exit();
                     return;
                 }
+
+                println!(
+                    "Rendered frame in {:?} - Camera: {}",
+                    duration, camera_center
+                );
             }
 
             // Resize window
@@ -63,6 +106,39 @@ fn main() -> Result<(), Error> {
                 window.request_redraw();
             }
 
+            // Handle keyboard inputs
+            WindowEvent::KeyboardInput {
+                event:
+                    KeyEvent {
+                        physical_key: PhysicalKey::Code(key),
+                        state: ElementState::Pressed,
+                        ..
+                    },
+                ..
+            } => match key {
+                // Redraw frame
+                KeyCode::KeyR => window.request_redraw(),
+
+                // Camera movement
+                KeyCode::KeyW => {
+                    camera_center.y -= 0.1;
+                    window.request_redraw();
+                }
+                KeyCode::KeyA => {
+                    camera_center.x += 0.1;
+                    window.request_redraw();
+                }
+                KeyCode::KeyS => {
+                    camera_center.y += 0.1;
+                    window.request_redraw();
+                }
+                KeyCode::KeyD => {
+                    camera_center.x -= 0.1;
+                    window.request_redraw();
+                }
+                _ => {}
+            },
+
             _ => {}
         },
         _ => {}
@@ -71,20 +147,47 @@ fn main() -> Result<(), Error> {
     res.map_err(|e| Error::UserDefined(Box::new(e)))
 }
 
-/// Draw the frame
-fn draw(frame: &mut [u8], window_size: PhysicalSize<u32>) {
+/// Auxiliary function to draw the frame
+fn draw(
+    frame: &mut [u8],
+    window_size: PhysicalSize<u32>,
+    pixel0_pos: Vec3,
+    pixel_delta_u: Vec3,
+    pixel_delta_v: Vec3,
+    camera_center: Vec3,
+) {
     for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
         let x = (i % window_size.width as usize) as f64;
         let y = (i / window_size.width as usize) as f64;
 
-        let px = x / window_size.width as f64;
-        let py = y / window_size.height as f64;
+        let pixel_center = pixel0_pos + x * pixel_delta_u + y * pixel_delta_v;
+        let ray = Ray {
+            origin: camera_center,
+            direction: pixel_center - camera_center,
+        };
 
+        let color = ray_color(ray);
         pixel.copy_from_slice(&[
-            (255.0 * ((1.0 - px) * (1.0 - py))).round() as u8,
-            (255.0 * (px * (1.0 - py))).round() as u8,
-            (255.0 * ((1.0 - px) * py)).round() as u8,
+            color.x.floor() as u8,
+            color.y.floor() as u8,
+            color.z.floor() as u8,
             0xFF,
         ]);
     }
+}
+
+fn dist(a: Vec3, b:Vec3) -> f64 {
+    ((a.x - b.x).powi(2) + (a.y - b.y).powi(2) + (a.z - b.z).powi(2)).sqrt()
+}
+
+fn ray_color(ray: Ray) -> Vec3 {
+    let normalized = ray.direction.normalize();
+    let linearized = normalized.y / 2.0 + 0.5;
+
+    if dist(ray.direction, Vec3::ZERO) <= 1.05 {
+        return Vec3::ZERO;
+    }
+
+    let col = (1.0 - linearized) * Vec3::ONE + linearized * Vec3::new(0.5, 0.7, 1.0);
+    col * 255.0
 }
