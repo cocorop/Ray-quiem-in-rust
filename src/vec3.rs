@@ -35,7 +35,7 @@ impl Vec3 {
     }
 
     pub fn normalize(&self) -> Vec3 {
-        self / self.length()
+        (*self) / (*self).length()
     }
 }
 
@@ -117,7 +117,7 @@ impl MulAssign<f64> for Vec3 {
 }
 
 // Vector-scalar division
-impl Div<f64> for &Vec3 {
+impl Div<f64> for Vec3 {
     type Output = Vec3;
     fn div(self, rhs: f64) -> Self::Output {
         Vec3::new(self.x / rhs, self.y / rhs, self.z / rhs)
