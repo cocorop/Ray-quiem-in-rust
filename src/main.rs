@@ -7,10 +7,14 @@ use winit::event_loop::EventLoop;
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::WindowBuilder;
 
+use crate::hittable::{HitRecord, Hittable};
 use crate::ray::Ray;
+use crate::sphere::Sphere;
 use crate::vec3::Vec3;
 
+mod hittable;
 mod ray;
+mod sphere;
 mod vec3;
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
@@ -176,30 +180,15 @@ fn draw(
     }
 }
 
-fn hit_sphere(sphere_center: Vec3, sphere_radius: f64, ray: &Ray) -> f64 {
-    let cmq = sphere_center - ray.origin;
-
-    let a = ray.direction * ray.direction;
-    let b = -2.0 * ray.direction * cmq;
-    let c = cmq * cmq - sphere_radius * sphere_radius;
-
-    let discriminant = b * b - 4.0 * a * c;
-    if discriminant < 0.0 {
-        -1.0
-    } else {
-        (-b - discriminant.sqrt()) / (2.0 * a)
-    }
-}
-
 fn ray_color(ray: Ray) -> Vec3 {
     let normalized = ray.direction.normalize();
     let linearized = normalized.y / 2.0 + 0.5;
 
-    let sphere_center = Vec3::new(0.0, 0.0, -1.0);
-    let t = hit_sphere(sphere_center, 0.5, &ray);
-    if t > 0.0 {
-        let surface_normal = (ray.at(t) - sphere_center).normalize();
-        return (surface_normal + Vec3::ONE) * 127.5; // divide by 2 then multiply by 255
+    let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5);
+    let mut hit_record = HitRecord::default();
+
+    if sphere.hit(ray, 0.0, 50.0, &mut hit_record) {
+        return (hit_record.normal + Vec3::ONE) * 127.5; // divide by 2 then multiply by 255
     }
 
     // Blue-white gradient
