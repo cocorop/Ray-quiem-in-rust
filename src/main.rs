@@ -121,19 +121,19 @@ fn main() -> Result<(), Error> {
 
                 // Camera movement
                 KeyCode::KeyW => {
-                    camera_center.y -= 0.1;
-                    window.request_redraw();
-                }
-                KeyCode::KeyA => {
-                    camera_center.x += 0.1;
-                    window.request_redraw();
-                }
-                KeyCode::KeyS => {
                     camera_center.y += 0.1;
                     window.request_redraw();
                 }
-                KeyCode::KeyD => {
+                KeyCode::KeyA => {
                     camera_center.x -= 0.1;
+                    window.request_redraw();
+                }
+                KeyCode::KeyS => {
+                    camera_center.y -= 0.1;
+                    window.request_redraw();
+                }
+                KeyCode::KeyD => {
+                    camera_center.x += 0.1;
                     window.request_redraw();
                 }
                 _ => {}
@@ -156,6 +156,9 @@ fn draw(
     pixel_delta_v: Vec3,
     camera_center: Vec3,
 ) {
+    let sphere_center = Vec3::ZERO;
+    let sphere_radius = 1.0;
+
     for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
         let x = (i % window_size.width as usize) as f64;
         let y = (i / window_size.width as usize) as f64;
@@ -176,16 +179,41 @@ fn draw(
     }
 }
 
-fn dist(a: Vec3, b:Vec3) -> f64 {
+fn dist(a: Vec3, b: Vec3) -> f64 {
     ((a.x - b.x).powi(2) + (a.y - b.y).powi(2) + (a.z - b.z).powi(2)).sqrt()
 }
+
+fn will_hit_sphere(sphere_center: Vec3, sphere_radius: f64, ray: Ray) -> bool {
+        // let mut res = Vec::<f64>::new();
+
+        let cmq = sphere_center - ray.origin;
+
+        let a = ray.direction * ray.direction;
+        let b = -2.0 * ray.direction * cmq;
+        let c = cmq * cmq - sphere_radius;
+
+        let bsq_4ac = b * b - 4.0 * a * c;
+        return bsq_4ac >= 0.0;
+
+        // if bsq_4ac < 0.0 {
+        //     return res;
+        // } else if bsq_4ac == 0.0 {
+        //     res.push(-b / (2.0 * a));
+        // } else if bsq_4ac > 1.0 {
+        //     let sqrt = bsq_4ac.sqrt();
+        //     res.push((-b + sqrt) / (2.0 * a));
+        //     res.push((-b - sqrt) / (2.0 * a));
+        // }
+
+        // return res;
+    }
 
 fn ray_color(ray: Ray) -> Vec3 {
     let normalized = ray.direction.normalize();
     let linearized = normalized.y / 2.0 + 0.5;
 
-    if dist(ray.direction, Vec3::ZERO) <= 1.05 {
-        return Vec3::ZERO;
+    if will_hit_sphere(Vec3::new(0.0, 0.0, -1.0), 0.5, ray) {
+        return Vec3::new(255.0, 0.0, 0.0);
     }
 
     let col = (1.0 - linearized) * Vec3::ONE + linearized * Vec3::new(0.5, 0.7, 1.0);
