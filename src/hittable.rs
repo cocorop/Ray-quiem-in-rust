@@ -1,8 +1,7 @@
-use std::f64::NAN;
-
 use crate::{ray::Ray, vec3::Vec3};
 
 // Stores information about a ray-hittable collision.
+#[derive(Clone, Default)]
 pub struct HitRecord {
     pub point: Vec3,
     pub normal: Vec3,
@@ -11,6 +10,10 @@ pub struct HitRecord {
 }
 
 impl HitRecord {
+    pub fn new() -> HitRecord {
+        HitRecord::default()
+    }
+
     pub fn set_face_normal(&mut self, ray: Ray, outward_normal: Vec3) {
         self.facing_front = ray.direction * outward_normal < 0.0;
         self.normal = if self.facing_front {
@@ -18,17 +21,6 @@ impl HitRecord {
         } else {
             -outward_normal
         };
-    }
-}
-
-impl Default for HitRecord {
-    fn default() -> Self {
-        HitRecord {
-            point: Vec3::ZERO,
-            normal: Vec3::ZERO,
-            t: NAN,
-            facing_front: false,
-        }
     }
 }
 

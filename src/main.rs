@@ -8,17 +8,20 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::WindowBuilder;
 
 use crate::hittable::{HitRecord, Hittable};
+use crate::hittable_list::HittableList;
 use crate::ray::Ray;
 use crate::sphere::Sphere;
 use crate::vec3::Vec3;
 
 mod hittable;
+mod hittable_list;
 mod ray;
 mod sphere;
+mod utils;
 mod vec3;
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const WIDTH: u32 = 576;
+const WIDTH: u32 = 1920;
 const HEIGHT: u32 = (WIDTH as f64 / ASPECT_RATIO) as u32;
 const FOCAL_LENGTH: f64 = 1.0;
 
@@ -60,6 +63,11 @@ fn main() -> Result<(), Error> {
         camera_center - Vec3::new(0.0, 0.0, FOCAL_LENGTH) - VIEWPORT_U / 2.0 - VIEWPORT_V / 2.0;
     let pixel0_pos = viewport_upper_left + (pixel_delta_u + pixel_delta_v) / 2.0;
 
+    // World
+    let mut world = HittableList::new();
+    world.add(Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5)));
+    world.add(Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0)));
+
     // Event loop
     let res = event_loop.run(|event, elwt| match event {
         Event::WindowEvent { window_id, event } if window_id == window.id() => match event {
@@ -76,6 +84,7 @@ fn main() -> Result<(), Error> {
                     pixel_delta_u,
                     pixel_delta_v,
                     camera_center,
+                    &world,
                 );
 
                 let duration = start.elapsed();
@@ -159,6 +168,7 @@ fn draw(
     pixel_delta_u: Vec3,
     pixel_delta_v: Vec3,
     camera_center: Vec3,
+    world: &dyn Hittable,
 ) {
     for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
         let x = (i % window_size.width as usize) as f64;
@@ -170,7 +180,7 @@ fn draw(
             direction: pixel_center - camera_center,
         };
 
-        let color = ray_color(ray);
+        let color = ray_color(ray, world);
         pixel.copy_from_slice(&[
             color.x.floor() as u8,
             color.y.floor() as u8,
@@ -180,14 +190,12 @@ fn draw(
     }
 }
 
-fn ray_color(ray: Ray) -> Vec3 {
+fn ray_color(ray: Ray, world: &dyn Hittable) -> Vec3 {
     let normalized = ray.direction.normalize();
     let linearized = normalized.y / 2.0 + 0.5;
 
-    let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5);
-    let mut hit_record = HitRecord::default();
-
-    if sphere.hit(ray, 0.0, 50.0, &mut hit_record) {
+    let mut hit_record = HitRecord::new();
+    if world.hit(ray, 0.0, 50.0, &mut hit_record) {
         return (hit_record.normal + Vec3::ONE) * 127.5; // divide by 2 then multiply by 255
     }
 
