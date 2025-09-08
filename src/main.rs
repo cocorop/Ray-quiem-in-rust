@@ -156,9 +156,6 @@ fn draw(
     pixel_delta_v: Vec3,
     camera_center: Vec3,
 ) {
-    let sphere_center = Vec3::ZERO;
-    let sphere_radius = 1.0;
-
     for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
         let x = (i % window_size.width as usize) as f64;
         let y = (i / window_size.width as usize) as f64;
@@ -179,43 +176,33 @@ fn draw(
     }
 }
 
-fn dist(a: Vec3, b: Vec3) -> f64 {
-    ((a.x - b.x).powi(2) + (a.y - b.y).powi(2) + (a.z - b.z).powi(2)).sqrt()
-}
+fn hit_sphere(sphere_center: Vec3, sphere_radius: f64, ray: &Ray) -> f64 {
+    let cmq = sphere_center - ray.origin;
 
-fn will_hit_sphere(sphere_center: Vec3, sphere_radius: f64, ray: Ray) -> bool {
-        // let mut res = Vec::<f64>::new();
+    let a = ray.direction * ray.direction;
+    let b = -2.0 * ray.direction * cmq;
+    let c = cmq * cmq - sphere_radius * sphere_radius;
 
-        let cmq = sphere_center - ray.origin;
-
-        let a = ray.direction * ray.direction;
-        let b = -2.0 * ray.direction * cmq;
-        let c = cmq * cmq - sphere_radius;
-
-        let bsq_4ac = b * b - 4.0 * a * c;
-        return bsq_4ac >= 0.0;
-
-        // if bsq_4ac < 0.0 {
-        //     return res;
-        // } else if bsq_4ac == 0.0 {
-        //     res.push(-b / (2.0 * a));
-        // } else if bsq_4ac > 1.0 {
-        //     let sqrt = bsq_4ac.sqrt();
-        //     res.push((-b + sqrt) / (2.0 * a));
-        //     res.push((-b - sqrt) / (2.0 * a));
-        // }
-
-        // return res;
+    let discriminant = b * b - 4.0 * a * c;
+    if discriminant < 0.0 {
+        -1.0
+    } else {
+        (-b - discriminant.sqrt()) / (2.0 * a)
     }
+}
 
 fn ray_color(ray: Ray) -> Vec3 {
     let normalized = ray.direction.normalize();
     let linearized = normalized.y / 2.0 + 0.5;
 
-    if will_hit_sphere(Vec3::new(0.0, 0.0, -1.0), 0.5, ray) {
-        return Vec3::new(255.0, 0.0, 0.0);
+    let sphere_center = Vec3::new(0.0, 0.0, -1.0);
+    let t = hit_sphere(sphere_center, 0.5, &ray);
+    if t > 0.0 {
+        let surface_normal = (ray.at(t) - sphere_center).normalize();
+        return (surface_normal + Vec3::ONE) * 127.5; // divide by 2 then multiply by 255
     }
 
+    // Blue-white gradient
     let col = (1.0 - linearized) * Vec3::ONE + linearized * Vec3::new(0.5, 0.7, 1.0);
     col * 255.0
 }
