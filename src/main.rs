@@ -13,11 +13,17 @@ use crate::ray::Ray;
 use crate::sphere::Sphere;
 use crate::vec3::Vec3;
 
+#[path = "lib/utils/common.rs"]
+mod common;
+#[path = "lib/hittable/hittable.rs"]
 mod hittable;
+#[path = "lib/hittable/hittable_list.rs"]
 mod hittable_list;
+#[path = "lib/utils/ray.rs"]
 mod ray;
+#[path = "lib/hittable/sphere.rs"]
 mod sphere;
-mod utils;
+#[path = "lib/utils/vec3.rs"]
 mod vec3;
 
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
